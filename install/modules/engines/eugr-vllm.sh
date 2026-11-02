@@ -34,9 +34,9 @@ chown -R "${SPARK_USER}:${SPARK_USER}" "${REPO}"
 # RHEL container-tools enforce short-name resolution: a non-interactive
 # `docker pull eugr/spark-vllm:latest` fails ("cannot prompt without a TTY").
 # Normalize the prebuilt runner image to a fully-qualified docker.io name.
-# Idempotent: the `=` anchor does not match already-qualified values.
-sed -i -e 's|=eugr/spark-vllm-b12x:|=docker.io/eugr/spark-vllm-b12x:|' \
-       -e 's|=eugr/spark-vllm:|=docker.io/eugr/spark-vllm:|' "${REPO}/build-and-copy.sh"
+# Idempotent: the `"` anchor does not match already-qualified values.
+sed -i -e 's|"eugr/spark-vllm-b12x:|"docker.io/eugr/spark-vllm-b12x:|' \
+       -e 's|"eugr/spark-vllm:|"docker.io/eugr/spark-vllm:|' "${REPO}/build-and-copy.sh"
 
 echo "==> Build vllm-node image (downloads prebuilt wheels when available)"
 sudo -u "${SPARK_USER}" bash -lc "cd '${REPO}' && ./build-and-copy.sh"
