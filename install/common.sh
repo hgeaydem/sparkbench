@@ -64,7 +64,7 @@ firewall_open_port() {
     ufw allow "${port}/tcp" comment "${comment}" >/dev/null
     echo "  firewall (ufw): allowed ${port}/tcp (${comment})"
   elif command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
-    firewall-cmd --permanent --add-port="${port}/tcp" --comment="${comment}" >/dev/null
+    firewall-cmd --permanent --add-port="${port}/tcp" >/dev/null
     firewall-cmd --reload >/dev/null
     echo "  firewall (firewalld): opened ${port}/tcp (${comment})"
   fi
