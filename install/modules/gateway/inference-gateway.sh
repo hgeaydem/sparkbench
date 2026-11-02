@@ -42,5 +42,15 @@ sleep 1
 systemctl restart spark-inference-gateway.service
 
 sleep 1
-curl -fsS "http://127.0.0.1:9000/v1/models" >/dev/null
-echo "OK: inference gateway at http://sparky:9000/v1"
+# No engine profile active yet → :9000 answers 503; that is expected.
+# Verify the gateway process is up and answering, not a specific status.
+code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:9000/v1/models || true)"
+case "${code}" in
+  200) echo "OK: inference gateway at http://sparky:9000/v1 (engine active)" ;;
+  503) echo "OK: inference gateway at http://sparky:9000/v1 (up; no engine profile active yet)" ;;
+  *)
+    echo "FAIL: gateway not answering (HTTP ${code:-none})"
+    systemctl status spark-inference-gateway.service --no-pager -l | tail -15
+    exit 1
+    ;;
+esac
