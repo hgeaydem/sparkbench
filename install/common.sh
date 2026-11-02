@@ -75,7 +75,10 @@ firewall_open_port() {
 selinux_nginx_prep() {
   [[ "$SPARK_DISTRO" == "rhel" ]] || return 0
   command -v sestatus >/dev/null 2>&1 || return 0
-  sestatus 2>/dev/null | awk '/Current mode/ {print $4}' | grep -q enforcing || return 0
+  # RHEL sestatus says "Current mode: enforcing" (colon); Ubuntu "is enforcing".
+  local mode
+  mode="$(sestatus 2>/dev/null | awk -F': *' '/^Current mode/ {print $2}')"
+  [[ "$mode" == "enforcing" ]] || return 0
   if command -v chcon >/dev/null 2>&1; then
     chcon -R -t httpd_sys_content_t "${SPARK_ROOT}/portal" 2>/dev/null || true
     # new files (e.g. models.json from the inventory refresh) inherit the dir label
