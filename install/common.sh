@@ -37,7 +37,8 @@ SPARK_SHELF_MOUNT="${SPARK_SHELF_MOUNT:-/mnt/model-shelf}"
 #          podman + podman-docker shim, rootless containers)
 SPARK_DISTRO="debian"
 if [[ -r /etc/os-release ]]; then
-  _os_id="${ID:-}" _os_like="${ID_LIKE:-}"
+  _os_id="$(. /etc/os-release && printf '%s' "${ID:-}")"
+  _os_like="$(. /etc/os-release && printf '%s' "${ID_LIKE:-}")"
   case "${_os_id} ${_os_like}" in
     *rhel*|*fedora*|*centos*|*rocky*|*alma*) SPARK_DISTRO="rhel" ;;
   esac

@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # Not a Debian convenience package on RHEL — skip gracefully.
-_os_id=""; _os_like=""
-[[ -r /etc/os-release ]] && { _os_id="${ID:-}"; _os_like="${ID_LIKE:-}"; }
+_os_id="$(. /etc/os-release 2>/dev/null && printf '%s' "${ID:-}")"
+_os_like="$(. /etc/os-release 2>/dev/null && printf '%s' "${ID_LIKE:-}")"
 case "${_os_id} ${_os_like}" in
   *rhel*|*fedora*|*centos*|*rocky*|*alma*)
     echo "zsh-powerlevel10k is a Debian/Ubuntu convenience extra — not installed on RHEL (skip)"
