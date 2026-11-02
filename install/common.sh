@@ -125,6 +125,16 @@ nginx_site_path() {
 write_nginx_portal_site() {
   local site
   site="$(nginx_site_path)"
+  # WebSocket upgrade map for the /hermes/ proxy — stock configs don't ship it
+  # (Debian setups often get it via sites-available; conf.d works on both).
+  if ! grep -rq 'map $http_upgrade' /etc/nginx/nginx.conf /etc/nginx/conf.d/ /etc/nginx/sites-enabled/ 2>/dev/null; then
+    cat > /etc/nginx/conf.d/spark-portal-map.conf <<'MAP'
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+MAP
+  fi
   cat > "${site}" <<NGINX
 server {
     listen 80 default_server;
