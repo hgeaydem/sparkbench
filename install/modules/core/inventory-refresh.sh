@@ -10,7 +10,9 @@ echo "==> Sync portal + scripts"
 mkdir -p "${SPARK_ROOT}/portal/archive/v1"
 cp "${SPARK_STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null \
   || cp "${SPARK_STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null || true
-cp "${SPARK_STAGING}/scripts/spark-inventory-refresh.sh" "${SPARK_STAGING}/scripts/spark-inventory-watch.sh" "${SPARK_ROOT}/scripts/"
+if [[ "${SPARK_STAGING}" != "${SPARK_ROOT}" ]]; then
+  cp "${SPARK_STAGING}/scripts/spark-inventory-refresh.sh" "${SPARK_STAGING}/scripts/spark-inventory-watch.sh" "${SPARK_ROOT}/scripts/"
+fi
 chmod +x "${SPARK_ROOT}/scripts/spark-inventory-refresh.sh" "${SPARK_ROOT}/scripts/spark-inventory-watch.sh"
 
 
