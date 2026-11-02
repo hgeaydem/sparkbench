@@ -31,8 +31,22 @@ else
 fi
 chown -R "${SPARK_USER}:${SPARK_USER}" "${REPO}"
 
+# RHEL container-tools enforce short-name resolution: a non-interactive
+# `docker pull eugr/spark-vllm:latest` fails ("cannot prompt without a TTY").
+# Normalize the prebuilt runner image to a fully-qualified docker.io name.
+# Idempotent: the `=` anchor does not match already-qualified values.
+sed -i -e 's|=eugr/spark-vllm-b12x:|=docker.io/eugr/spark-vllm-b12x:|' \
+       -e 's|=eugr/spark-vllm:|=docker.io/eugr/spark-vllm:|' "${REPO}/build-and-copy.sh"
+
 echo "==> Build vllm-node image (downloads prebuilt wheels when available)"
 sudo -u "${SPARK_USER}" bash -lc "cd '${REPO}' && ./build-and-copy.sh"
+
+if [[ "${SPARK_ENGINE_INSTALL_ONLY:-0}" == "1" ]]; then
+  echo
+  echo "Done (install only: SPARK_ENGINE_INSTALL_ONLY=1 — engine NOT started)."
+  echo "  Start later:  spark engine eugr up"
+  exit 0
+fi
 
 echo "==> Start Qwen3.6 NVFP4 via eugr recipe (daemon)"
 sudo -u "${SPARK_USER}" "${SPARK_ROOT}/scripts/spark-eugr" up
