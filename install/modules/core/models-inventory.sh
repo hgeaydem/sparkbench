@@ -12,8 +12,11 @@ mkdir -p "${SPARK_ROOT}"/{data,scripts,portal,install}
 rsync -a "${STAGING}/data/" "${SPARK_ROOT}/data/"
 rsync -a "${STAGING}/scripts/spark-inventory-build" "${STAGING}/scripts/spark-inventory-build.py" "${SPARK_ROOT}/scripts/"
 mkdir -p "${SPARK_ROOT}/portal/archive/v1"
+# NOTE: SPARK_STAGING defaults to SPARK_ROOT — guard against cp'ing a file onto itself.
 if [[ -f "${STAGING}/portal/archive/v1/models.html" ]]; then
-  cp "${STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/"
+  if [[ "${STAGING}" != "${SPARK_ROOT}" ]]; then
+    cp "${STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/"
+  fi
 elif [[ -f "${STAGING}/portal/models.html" ]]; then
   cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/"
 else
