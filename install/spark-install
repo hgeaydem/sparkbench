@@ -51,6 +51,11 @@ spark-install — SparkBench host bootstrap
 
 Usage: sudo bash install/spark-install <target> [args]
 
+Supported distros (auto-detected from /etc/os-release):
+  - Debian/Ubuntu: apt, ufw, nginx sites-enabled, docker
+  - RHEL 10 (GB10): dnf, firewalld, nginx conf.d, SELinux,
+    podman + podman-docker shim, rootless containers
+
 Targets:
   quickstart             bootstrap + core (portal, APIs, CLI — no GPU engine)
   core                 Portal, APIs, CLI, model inventory (no GPU engine)
@@ -91,6 +96,8 @@ cmd_quickstart() {
 cmd_core() {
   echo "spark-install: core (portal + model shelf + HTTP APIs + CLI)"
   export SPARK_INSTALL_BATCH=1
+  run_module core/container-runtime.sh
+  run_module core/venv.sh
   run_module core/portal-base.sh
   run_module core/cli.sh
   run_module core/models-layout.sh

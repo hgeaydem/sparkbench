@@ -21,8 +21,7 @@ docker stop spark-vllm-qwen36 2>/dev/null || true
 docker rm spark-vllm-qwen36 2>/dev/null || true
 
 echo "==> Clone or update eugr/spark-vllm-docker"
-export DEBIAN_FRONTEND=noninteractive
-apt-get install -y -qq git python3-pip
+pkg_install git
 if [[ -d "${REPO}/.git" ]]; then
   git -C "${REPO}" pull --ff-only
 else

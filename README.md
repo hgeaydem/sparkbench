@@ -84,6 +84,14 @@ bash scripts/sparky-protect-runtime.sh
 spark models inventory
 ```
 
+**RHEL 10 (GB10)** is supported: distro is auto-detected. On RHEL the install uses
+`dnf`, `firewalld`, the nginx `conf.d` layout, SELinux labels, and podman with the
+`podman-docker` shim (containers run rootless). The engine launch lines
+(`--gpus all`, `--privileged`, `--ipc=host`, `--network host`) are unchanged —
+`nvidia-container-toolkit` (installed by `core/container-runtime.sh`) provides the
+GPU hook. One RHEL-only env: rootless `RLIMIT_NOFILE` is capped at the user's hard
+limit, so `spark-eugr` exports `VLLM_SPARK_NOFILE_LIMIT=524288` when non-root.
+
 <details>
 <summary>Manual install (same steps, no curl bootstrap)</summary>
 

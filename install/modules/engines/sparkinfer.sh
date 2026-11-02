@@ -26,8 +26,8 @@ fi
 
 IMAGE="ghcr.io/0xsero/deepseek-v4-flash-0731-spark-sparkinfer@sha256:2e077489a83a0360952828051fe7f7a32c1801e5ce8436d85f7267583d614ff4"
 if [[ -f "${PIN}" ]]; then
-  digest="$(python3 -c "import yaml; print(((yaml.safe_load(open('${PIN}')) or {}).get('source') or {}).get('image_digest') or '')" 2>/dev/null || true)"
-  repo="$(python3 -c "import yaml; print(((yaml.safe_load(open('${PIN}')) or {}).get('source') or {}).get('image') or '')" 2>/dev/null || true)"
+  digest="$(PYBIN="${SPARK_ROOT}/venv/bin/python"; command -v python3 >/dev/null && [[ ! -x "$PYBIN" ]] && PYBIN="$(command -v python3)"; "$PYBIN" -c "import yaml; print(((yaml.safe_load(open('${PIN}')) or {}).get('source') or {}).get('image_digest') or '')" 2>/dev/null || true)"
+  repo="$(PYBIN="${SPARK_ROOT}/venv/bin/python"; [[ ! -x "$PYBIN" ]] && PYBIN="$(command -v python3)"; "$PYBIN" -c "import yaml; print(((yaml.safe_load(open('${PIN}')) or {}).get('source') or {}).get('image') or '')" 2>/dev/null || true)"
   if [[ -n "${digest}" && -n "${repo}" ]]; then
     IMAGE="${repo}@${digest}"
   fi

@@ -23,8 +23,22 @@ echo "==> nginx: portal + API proxies (via common.sh)"
 maybe_write_nginx_portal_site
 
 echo "==> Install inotify-tools (optional watcher)"
-export DEBIAN_FRONTEND=noninteractive
-apt-get install -y -qq inotify-tools
+if ! command -v inotifywait >/dev/null 2>&1; then
+  case "${SPARK_DISTRO}" in
+    rhel)
+      # inotify-tools lives in EPEL (preconfigured on the GB10 RHEL image)
+      if ! dnf -q list available inotify-tools >/dev/null 2>&1; then
+        echo "WARN: inotify-tools not available (EPEL repo missing?) — refresh falls back to timer only" >&2
+        exit 0
+      fi
+      dnf -y install inotify-tools >/dev/null
+      ;;
+    *)
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get install -y -qq inotify-tools
+      ;;
+  esac
+fi
 
 echo "==> systemd: periodic refresh (every 2 min)"
 cat > /etc/systemd/system/spark-inventory-refresh.service <<'UNIT'

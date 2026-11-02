@@ -11,6 +11,8 @@ UNIT="/etc/systemd/system/spark-inference-gateway.service"
 chmod +x "${TARGET}/scripts/spark-inference-gateway"
 chmod +x "${TARGET}/scripts/spark-inference-gateway.py"
 
+firewall_open_port 9000 "inference gateway"
+
 cat > "${UNIT}" <<UNITEOF
 [Unit]
 Description=Spark Inference Gateway (unified :9000/v1)

@@ -11,6 +11,32 @@ sudo bash install/spark-install status    # systemd + HTTP health
 
 Env overrides (optional): `SPARK_ROOT`, `SPARK_STAGING`, `SPARK_USER`, `SPARK_HOST`, `SPARK_LAN_IP` — see `common.sh`.
 
+## Distro support
+
+`common.sh` auto-detects the distro from `/etc/os-release` (`SPARK_DISTRO=rhel|debian`)
+and the modules branch on it:
+
+| Concern | Debian/Ubuntu | RHEL 10 (GB10) |
+|---|---|---|
+| Packages | `apt-get` | `dnf` (`pkg_install` helper) |
+| Container CLI | docker.io | `podman` + `podman-docker` shim (rootless) |
+| GPU passthrough | `--gpus all` + nvidia runtime | `--gpus all` + `nvidia-container-toolkit` hook (launch lines unchanged) |
+| Firewall | `ufw` | `firewalld` (`firewall_open_port` helper) |
+| nginx site | `sites-available` + symlink | `conf.d/spark-portal.conf` (+ stock `default.conf` retired) |
+| SELinux | — | portal labeled `httpd_sys_content_t`, `httpd_can_network_connect` on |
+| rootless subuids | — | `ensure_rootless_subuids` (524288-589823) if missing |
+
+RHEL notes:
+- `core/venv.sh` builds `/opt/spark/venv` (the API shebangs). RHEL's `python3 -m venv`
+  ships ensurepip — no `python3-venv` package needed.
+- `inotify-tools` (inventory watcher) comes from EPEL — preconfigured on the GB10
+  RHEL image; the module degrades to timer-only refresh if the repo is absent.
+- Engine builds (`llama`, `ds4`) put `/usr/local/cuda*/bin` on the build PATH
+  explicitly (CUDA 13.x, sm_121).
+- Rootless podman cannot raise `RLIMIT_NOFILE` above the user hard limit (524288 on
+  GB10 RHEL); `spark-eugr` exports `VLLM_SPARK_NOFILE_LIMIT=524288` when non-root,
+  which `launch-cluster.sh` consumes. The GPU run line itself is unchanged.
+
 Host identity: copy `install/host.env.example` → `/etc/spark/host.env` or `/opt/spark/host.env` (gitignored). Or run `spark-install bootstrap`.
 
 Bundled targets (`core`, `gateway`) set `SPARK_INSTALL_BATCH=1` so modules defer nginx rewrites; the orchestrator calls `write_nginx_portal_site` once at the end.

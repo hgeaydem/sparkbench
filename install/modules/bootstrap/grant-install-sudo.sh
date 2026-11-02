@@ -14,13 +14,15 @@ echo "  1. Allow passwordless sudo for install/spark-install and install/modules
 echo "  2. Run the Netdata + portal base module"
 echo
 
-if [ ! -f "$SUDOERS" ] || ! grep -qF "spark/install" "$SUDOERS" 2>/dev/null; then
+# Rewrite the rule unless it is already exactly present — this also covers
+# re-deploys under a different SPARK_USER (e.g. a previous trial account).
+if [ -f "$SUDOERS" ] && grep -qxF "$RULE" "$SUDOERS" 2>/dev/null; then
+  echo "OK: sudoers rule already present"
+else
   echo "$RULE" | sudo tee "$SUDOERS" >/dev/null
   sudo chmod 440 "$SUDOERS"
   sudo visudo -cf "$SUDOERS"
   echo "OK: sudoers rule added ($SUDOERS)"
-else
-  echo "OK: sudoers rule already present"
 fi
 
 sudo bash "${SPARK_ROOT}/install/modules/core/portal-base.sh"

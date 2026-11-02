@@ -2,6 +2,16 @@
 # Install zsh + Powerlevel10k for sparky login users.
 set -euo pipefail
 
+# Not a Debian convenience package on RHEL — skip gracefully.
+_os_id=""; _os_like=""
+[[ -r /etc/os-release ]] && { _os_id="${ID:-}"; _os_like="${ID_LIKE:-}"; }
+case "${_os_id} ${_os_like}" in
+  *rhel*|*fedora*|*centos*|*rocky*|*alma*)
+    echo "zsh-powerlevel10k is a Debian/Ubuntu convenience extra — not installed on RHEL (skip)"
+    exit 0
+    ;;
+esac
+
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update -qq

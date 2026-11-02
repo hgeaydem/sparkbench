@@ -17,9 +17,10 @@ rsync -a "${SPARK_STAGING}/data/ds4-dwarfstar.yaml" "${TARGET}/data/" 2>/dev/nul
 rsync -a "${SPARK_STAGING}/portal/" "${TARGET}/portal/" 2>/dev/null || true
 
 echo "==> Package deps"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq git build-essential
+case "${SPARK_DISTRO}" in
+  rhel) pkg_install git gcc gcc-c++ make cmake ;;
+  *)    pkg_install git build-essential ;;
+esac
 
 echo "==> Clone / update ds4 (Entrpi v0.5.0)"
 mkdir -p "${TARGET}/vendor"
@@ -35,7 +36,11 @@ fi
 chown -R "${SPARK_USER}:${SPARK_USER}" "${VENDOR}"
 
 echo "==> Build cuda-spark"
-sudo -u "${SPARK_USER}" bash -lc "cd '${VENDOR}' && make cuda-spark -j\"\$(nproc)\""
+CUDA_HOME="$(ls -d /usr/local/cuda* 2>/dev/null | head -1 || true)"
+sudo -u "${SPARK_USER}" env CUDA_HOME="${CUDA_HOME}" bash -lc "
+  [ -n \"\${CUDA_HOME:-}\" ] && export PATH=\"\${CUDA_HOME}/bin:\$PATH\"
+  cd '${VENDOR}' && make cuda-spark -j\"\$(nproc)\"
+"
 
 mkdir -p "${BIN_DIR}"
 install -m 755 "${VENDOR}/ds4-server" "${VENDOR}/ds4" "${VENDOR}/ds4-bench" "${BIN_DIR}/"

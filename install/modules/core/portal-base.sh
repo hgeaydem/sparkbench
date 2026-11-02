@@ -1,79 +1,61 @@
 #!/usr/bin/env bash
-# Spark home lab — Netdata + static portal (idempotent)
+# Portal foundation: netdata (telemetry) + nginx serving /opt/spark/portal
+# with all API proxy routes.
+#
+# Distro-aware via install/common.sh helpers:
+#  - RHEL:   dnf, firewalld, /etc/nginx/conf.d, SELinux labels
+#  - debian: apt, ufw, /etc/nginx/sites-enabled symlink
 set -euo pipefail
 
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../../common.sh
 source "${INSTALL_DIR}/common.sh"
-STAGING="${SPARK_STAGING}"
-TARGET="${SPARK_ROOT}"
-HOST_IP="${SPARK_LAN_IP}"
 
-echo "==> Creating ${TARGET} layout"
-mkdir -p "${TARGET}"/{portal,docs,install,services}
-rsync -a "${STAGING}/portal/" "${TARGET}/portal/"
-rsync -a "${STAGING}/docs/" "${TARGET}/docs/"
-rsync -a "${STAGING}/install/" "${TARGET}/install/"
-[ -f "${STAGING}/README.md" ] && rsync -a "${STAGING}/README.md" "${TARGET}/README.md"
-chown -R "${SPARK_USER}:${SPARK_USER}" "${TARGET}"
-
-echo "==> Installing Netdata (if missing)"
-if ! command -v netdata >/dev/null 2>&1; then
-  KICKSTART="/tmp/netdata-kickstart-spark-$$.sh"; rm -f "$KICKSTART"; curl -fsSL https://get.netdata.cloud/kickstart.sh -o "$KICKSTART"
-  sh "$KICKSTART" --non-interactive --stable-channel --disable-telemetry
+# --- Netdata (system telemetry, port 19999) ------------------------------------
+if command -v netdata >/dev/null 2>&1; then
+  echo "netdata already installed"
+else
+  curl -s https://my-netdata.io/kickstart.sh | bash >/dev/null 2>&1 \
+    || echo "WARN: netdata install failed (continuing)"
 fi
-systemctl enable --now netdata
-
-echo "==> Ensuring Netdata listens on LAN"
-NETDATA_CONF="/etc/netdata/netdata.conf"
-if [ -f "${NETDATA_CONF}" ]; then
-  if grep -q "^[[:space:]]*bind to[[:space:]]*=" "${NETDATA_CONF}"; then
-    sed -i "s/^[[:space:]]*bind to[[:space:]]*=.*/    bind to = 0.0.0.0/" "${NETDATA_CONF}" || true
-  else
-    sed -i "/^\[web\]/a\    bind to = 0.0.0.0" "${NETDATA_CONF}" || true
-  fi
+# Expose netdata on the LAN (it binds 127.0.0.1 by default).
+if [[ -f /etc/netdata/conf.d/web.conf ]]; then
+  grep -qE '^  bind: "0\.0\.0\.0"' /etc/netdata/conf.d/web.conf \
+    || sed -i 's/^  bind: "127.0.0.1"/  bind: "0.0.0.0"/' /etc/netdata/conf.d/web.conf
 fi
-systemctl restart netdata
+systemctl enable --now netdata >/dev/null 2>&1 || true
 
-echo "==> Installing nginx (if missing)"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq nginx rsync
+# --- nginx + rsync --------------------------------------------------------------
+if ! command -v nginx >/dev/null 2>&1 || ! command -v rsync >/dev/null 2>&1; then
+  pkg_install nginx rsync
+fi
 
-echo "==> Configuring nginx portal"
-cat > /etc/nginx/sites-available/spark-portal <<NGINX
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name sparky ${HOST_IP} _;
+# Firewall: portal (:80) + netdata (:19999) — no-op if no firewall is active.
+firewall_open_port 80 "spark portal"
+firewall_open_port 19999 "netdata"
 
-    root ${TARGET}/portal;
-    index index.html;
+mkdir -p "${SPARK_ROOT}/portal"
 
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
-}
-NGINX
+if [[ ! -f /etc/nginx/nginx.conf ]]; then
+  echo "ERROR: nginx not configured (missing /etc/nginx/nginx.conf)" >&2
+  exit 1
+fi
 
-ln -sfn /etc/nginx/sites-available/spark-portal /etc/nginx/sites-enabled/spark-portal
-rm -f /etc/nginx/sites-enabled/default
+# Writes the site (conf.d on RHEL / sites-available on debian), retires the
+# stock default site, labels content for SELinux, tests and reloads.
+write_nginx_portal_site
+
+# --- Verify --------------------------------------------------------------------
+echo "nginx test:"
 nginx -t
-systemctl enable --now nginx
-systemctl reload nginx
 
-echo "==> Firewall (if ufw active)"
-if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
-  ufw allow 80/tcp comment "spark portal"
-  ufw allow 19999/tcp comment "netdata"
+if curl -fsS -m 5 http://127.0.0.1:8765/api/gpu >/dev/null 2>&1; then
+  echo "gpu-api OK on 8765"
 fi
 
-echo "==> Health checks"
-sleep 2
-curl -fsS "http://127.0.0.1:19999/api/v1/info" >/dev/null && echo "Netdata: OK"
-curl -fsS "http://127.0.0.1/" | grep -q "Sparky" && echo "Portal: OK"
-
-echo
-echo "Done."
-echo "  Portal:  http://sparky/  (http://${HOST_IP}/)"
-echo "  Netdata: http://sparky:19999  (http://${HOST_IP}:19999)"
+SERVER_NAME=$(grep -oP 'server_name \K.*' /etc/nginx/nginx.conf 2>/dev/null || \
+  grep -oP 'server_name \K.*' "$(nginx_site_path)" 2>/dev/null || echo "")
+if [[ -n "$SERVER_NAME" ]] && echo "$SERVER_NAME" | grep -q "$SPARK_HOST"; then
+  echo "server_name includes $SPARK_HOST: $SERVER_NAME"
+fi
+echo "OK"

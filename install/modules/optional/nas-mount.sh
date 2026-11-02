@@ -23,8 +23,9 @@ SMB_USER="${NAS_USER:-spark}"
 
 echo "==> Installing SMB client tools (if missing)"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq cifs-utils smbclient keyutils
+if ! command -v mount.cifs >/dev/null 2>&1 || ! command -v smbclient >/dev/null 2>&1; then
+  pkg_install cifs-utils smbclient keyutils
+fi
 
 echo "==> Creating mount point ${MOUNT}"
 mkdir -p "${MOUNT}"

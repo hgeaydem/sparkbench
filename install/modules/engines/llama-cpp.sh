@@ -16,9 +16,10 @@ rsync -a "${STAGING}/scripts/" "${SPARK_ROOT}/scripts/" 2>/dev/null || true
 rsync -a "${STAGING}/docs/" "${SPARK_ROOT}/docs/" 2>/dev/null || true
 
 echo "==> Package deps"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq git cmake build-essential libssl-dev pkg-config
+case "${SPARK_DISTRO}" in
+  rhel) pkg_install git cmake gcc gcc-c++ make openssl-devel pkgconf-pkg-config ;;
+  *)    pkg_install git cmake build-essential libssl-dev pkg-config ;;
+esac
 
 echo "==> Clone / update llama.cpp"
 mkdir -p "${SPARK_ROOT}/vendor"
@@ -31,7 +32,9 @@ fi
 chown -R "${SPARK_USER}:${SPARK_USER}" "${VENDOR}"
 
 echo "==> Build (CUDA sm_121 — GB10)"
-sudo -u "${SPARK_USER}" bash -lc "
+CUDA_HOME="$(ls -d /usr/local/cuda* 2>/dev/null | head -1 || true)"
+sudo -u "${SPARK_USER}" env CUDA_HOME="${CUDA_HOME}" bash -lc "
+  [ -n \"\${CUDA_HOME:-}\" ] && export PATH=\"\${CUDA_HOME}/bin:\$PATH\"
   cd '${VENDOR}'
   rm -rf build
   cmake -B build \
@@ -47,6 +50,8 @@ mkdir -p "${BIN_DIR}"
 install -m 755 "${VENDOR}/build/bin/llama-server" "${BIN_DIR}/llama-server"
 install -m 755 "${VENDOR}/build/bin/llama-cli" "${BIN_DIR}/llama-cli"
 chown -R "${SPARK_USER}:${SPARK_USER}" "${BIN_DIR}"
+
+firewall_open_port "${PORT}" "llama.cpp server"
 
 cat >"${SPARK_ROOT}/scripts/spark-llama" <<'SCRIPT'
 #!/usr/bin/env bash

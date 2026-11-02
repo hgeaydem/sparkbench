@@ -34,6 +34,12 @@ run_recipe() {
     extra_args+=(--volume "$vol")
   done
   export VLLM_SPARK_EXTRA_DOCKER_ARGS="$extra"
+  # Rootless podman (RHEL) cannot raise RLIMIT_NOFILE above the user's hard
+  # limit; launch-cluster.sh reads this env for the nofile ulimit on the GPU
+  # run line. 524288 matches the GB10 RHEL user-session default.
+  if [[ "$(id -u)" -ne 0 ]]; then
+    export VLLM_SPARK_NOFILE_LIMIT="${VLLM_SPARK_NOFILE_LIMIT:-524288}"
+  fi
   local -a mods=()
   if [[ "${SKIP_DEFAULT_MODS}" != "1" ]]; then
     mods+=(--apply-mod mods/fix-qwen3.6-chat-template)
