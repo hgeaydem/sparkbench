@@ -83,7 +83,19 @@ selinux_nginx_prep() {
   if command -v setsebool >/dev/null 2>&1; then
     setsebool -P httpd_can_network_connect 1 2>/dev/null || true
   fi
-  echo "  SELinux: portal labeled httpd_sys_content_t + httpd_can_network_connect on"
+  # nginx (httpd) may only connect to ports labeled http_port_t — label the
+  # API backends (8765-8770) and the inference gateway (9000), else the proxy
+  # returns 502 "Permission denied" on every /api/* route.
+  if ! command -v semanage >/dev/null 2>&1; then
+    pkg_install "policycoreutils-python-utils" 2>/dev/null || true
+  fi
+  if command -v semanage >/dev/null 2>&1; then
+    semanage port -a -t http_port_t 8765-8770/tcp 2>/dev/null \
+      || semanage port -m -t http_port_t 8765-8770/tcp 2>/dev/null || true
+    semanage port -a -t http_port_t 9000/tcp 2>/dev/null \
+      || semanage port -m -t http_port_t 9000/tcp 2>/dev/null || true
+  fi
+  echo "  SELinux: portal labeled httpd_sys_content_t + httpd_can_network_connect on + ports 8765-8770/9000 as http_port_t"
 }
 
 # Rootless podman needs a subuid/subgid range for the run user (RHEL only).
