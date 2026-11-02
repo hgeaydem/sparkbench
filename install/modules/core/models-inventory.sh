@@ -12,8 +12,13 @@ mkdir -p "${SPARK_ROOT}"/{data,scripts,portal,install}
 rsync -a "${STAGING}/data/" "${SPARK_ROOT}/data/"
 rsync -a "${STAGING}/scripts/spark-inventory-build" "${STAGING}/scripts/spark-inventory-build.py" "${SPARK_ROOT}/scripts/"
 mkdir -p "${SPARK_ROOT}/portal/archive/v1"
-cp "${STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null \
-  || cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/"
+if [[ -f "${STAGING}/portal/archive/v1/models.html" ]]; then
+  cp "${STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/"
+elif [[ -f "${STAGING}/portal/models.html" ]]; then
+  cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/"
+else
+  echo "WARN: portal models.html not found in staging — skipping (archived page only)"
+fi
 cp "${STAGING}/scripts/spark-download-models.sh" "${SPARK_ROOT}/scripts/" 2>/dev/null || true
 chown -R "${SPARK_USER}:${SPARK_USER}" "${SPARK_ROOT}"
 
