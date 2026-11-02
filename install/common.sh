@@ -263,11 +263,21 @@ NGINX
     if [[ -f /etc/nginx/conf.d/default.conf ]]; then
       mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
     fi
+    # RHEL nginx.conf also carries an active welcome server (server_name _ on :80)
+    # that conflicts with our default_server — remove the block (idempotent).
+    if grep -q '^        server_name  _;$' /etc/nginx/nginx.conf; then
+      sed -i '/^    server {$/,/^    }$/d' /etc/nginx/nginx.conf
+      echo "  nginx: removed stock welcome server from nginx.conf"
+    fi
   else
     ln -sf "${site}" /etc/nginx/sites-enabled/spark-portal
     rm -f /etc/nginx/sites-enabled/default
   fi
   nginx -t
   selinux_nginx_prep
-  systemctl reload nginx
+  if systemctl is-active --quiet nginx; then
+    systemctl reload nginx
+  else
+    systemctl enable --now nginx
+  fi
 }
