@@ -8,9 +8,9 @@ source "${INSTALL_DIR}/common.sh"
 
 echo "==> Sync portal + scripts"
 mkdir -p "${SPARK_ROOT}/portal/archive/v1"
-cp "${STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null \
-  || cp "${STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null || true
-cp "${STAGING}/scripts/spark-inventory-refresh.sh" "${STAGING}/scripts/spark-inventory-watch.sh" "${SPARK_ROOT}/scripts/"
+cp "${SPARK_STAGING}/portal/archive/v1/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null \
+  || cp "${SPARK_STAGING}/portal/models.html" "${SPARK_ROOT}/portal/archive/v1/" 2>/dev/null || true
+cp "${SPARK_STAGING}/scripts/spark-inventory-refresh.sh" "${SPARK_STAGING}/scripts/spark-inventory-watch.sh" "${SPARK_ROOT}/scripts/"
 chmod +x "${SPARK_ROOT}/scripts/spark-inventory-refresh.sh" "${SPARK_ROOT}/scripts/spark-inventory-watch.sh"
 
 
@@ -89,7 +89,7 @@ systemctl daemon-reload
 systemctl enable --now spark-inventory-refresh.timer
 systemctl enable --now spark-inventory-watch.service
 
-spark-inventory-refresh || true
+"${SPARK_ROOT}/scripts/spark-inventory-refresh.sh" || true
 
 echo
 echo "Done."

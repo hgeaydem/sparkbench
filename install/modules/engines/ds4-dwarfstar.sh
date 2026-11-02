@@ -50,8 +50,8 @@ chown -R "${SPARK_USER}:${SPARK_USER}" "${BIN_DIR}" "${TARGET}/scripts/spark-ds4
 mkdir -p "${TARGET}/run" "${TARGET}/logs"
 chown "${SPARK_USER}:${SPARK_USER}" "${TARGET}/run" "${TARGET}/logs"
 
-rsync -a "${STAGING}/scripts/bench-queue-discover.py" "${TARGET}/run/" 2>/dev/null || true
-rsync -a "${STAGING}/scripts/bench-queue-worker.sh" "${TARGET}/run/" 2>/dev/null || true
+rsync -a "${SPARK_STAGING}/scripts/bench-queue-discover.py" "${TARGET}/run/" 2>/dev/null || true
+rsync -a "${SPARK_STAGING}/scripts/bench-queue-worker.sh" "${TARGET}/run/" 2>/dev/null || true
 chmod +x "${TARGET}/run/bench-queue-worker.sh" 2>/dev/null || true
 
 if [[ -f "${INSTALL_DIR}/modules/core/cli.sh" ]]; then
